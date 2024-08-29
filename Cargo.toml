@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+    "declarch",
+    "declarchRoot",
+    "shared",
+]
