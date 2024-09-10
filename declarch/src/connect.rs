@@ -1,3 +1,19 @@
+/*
+Copyright (C) 2024  StarlightStargaze
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 use core::fmt;
 use std::{env::args, fmt::Formatter, fs::{self}, path::PathBuf, process::exit, str::FromStr};
 use textwrap::{fill, Options};
@@ -205,7 +221,7 @@ impl Connect {
                 db.conn.execute("BEGIN TRANSACTION", ()).unwrap();
                 let aliases = self.get_alias(&conf);
                 let paths = conf.get("paths");
-                let config_path = conf.get("config");
+                let config_path = conf.get("locations");
                 let mut construct = Construct::new();
                 if self.link.1.is_empty() {
                     for title in Title::into_iter() {
@@ -244,7 +260,7 @@ impl Connect {
             db.conn.execute("BEGIN TRANSACTION", ()).unwrap();
             let aliases = self.get_alias(&conf);
             let paths = conf.get("paths");
-            let config_path = conf.get("config");
+            let config_path = conf.get("locations");
             let mut construct = Construct::new();
             for title in Title::into_iter() {
                 self.paths_process(title, &config_path, &mut statements, &aliases, paths, &mut construct)
@@ -285,36 +301,41 @@ impl Connect {
 
     fn help_text(&self) -> String {
         let help_text = "
-            Declarch
-                A declarative system management tool for various platforms. 
-            Usage:
-                declarch [Options] [Sub-Options] <COMMANDS>
+Declarch
+A declarative system management tool for various platforms. 
+Usage:
+    declarch [Options] [Sub-Options] <COMMANDS>
 
-            Options: 
-            -h, --help          Show this help message
+Options: 
+    -h, --help          Show this help message
 
-            -c, --config        Declare config location
-                                (Default: /etc/declarch/declarch.toml)
+    -c, --config        Declare config location
+                        (Default: /etc/declarch/declarch.toml)
             
-            -l, --link          Only links based on provided config 
-                                (Options Explained under \"Link\")
+    -l, --link          Only links based on provided config 
+    (Options Explained under \"Link\")
             
-            -i, --install       Only installs based on provided config
-                                (Options explained under \"Install\")
+    -i, --install       Only installs based on provided config
+    (Options explained under \"Install\")
             
-            Link:
-            -l, --link          Alone will link everything provided in your config and directories
+Link:
+    -l, --link <list of paths>      
+        Alone will link everything provided in your config paths
+                                    
+        Providing a list of paths allows you to select which paths to link
+    
+    Example:
+        declarch -l config backup special_config
 
-            <list of paths>     Decide which paths to link
-                Example:
-                    declarch -l config backup special_config
-
-            Install:
-            -i, --install       Alone will install everything provided in your config
-
-            <list of install>   Decide which installers to use
-                Example:
-                    declarch -i vsc flatpak paru
+Install:
+    -i, --install <list of managers> 
+        
+        Alone will install everything provided in your config
+        
+        Providing a list of managers allows you to select which managers to use.
+        
+    Example:
+        declarch -i vsc flatpak paru
         ";
 
         let terminal_width = dimensions().map(|w|w.0).unwrap_or(80 as usize);
@@ -324,58 +345,3 @@ impl Connect {
 
     }
 }
-
-
-
-// struct HelpText{
-// }
-
-// impl HelpText {
-//     fn new() -> Self {
-//         Self {}
-//     }
-// }
-
-
-
-// impl Display for HelpText {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         writeln!(f, "{}","Declarch".underline().bold().red())?;
-//         description(f, "A program that allows you to control your whole system declaratively. (Not just for Arch)",)?;
-//             title(f, "Usage")?;
-//         description(f, "declarch [option] [sub-option(s)] <INPUT>")?;
-//             title(f, "Options")?;
-//         description(f, "Using command \"declarch\" without options will update all config changes (using default or your set config file)")?;
-//         option(f, "-h, --help\t\t", "Prints this help text\n\n")?;
-//         option(f, "-c, --config [-s] <file>:", &format!("Path to the toml file.(Default is {})\n","/etc/declarch/declarch.toml".blue().bold()))?;
-//         extra(f, &format!("You can save the configuration location with `{}`\n","-s".blue()))?;
-//         option(f, "-f, --force,\t\t", "Overwrites existing files with confirmation\n")?;
-//         option(f, "-fn, --force-noconfirm\t", "Overwrites files without confirmation\n\n")?;
-//         option(f, "-l, --link\t\t", "Only links the files. Standalone without options links all stated files in your config/system directories\n")?;
-//         extra(f, &format!("Sub-options are described under \"{}\"\n\n","Linking".blue()))?;
-//         option(f, "-i, --install\t\t", "Only installs your packages. Standalone without options installs all stated packages.\n")?;
-//         extra(f, &format!("Sub-options are described under \"{}\"","Installing".blue()))?;
-//             title(f, "Linking")?;
-        
-//         Ok(())
-//     }
-// }
-
-// fn title(f: &mut std::fmt::Formatter<'_>, title: &str) -> std::fmt::Result {
-//     writeln!(f, "{}:",title.yellow().bold())?;
-//     Ok(())
-// }
-
-// fn extra(f: &mut Formatter<'_>, text: &str) -> std::fmt::Result {
-//     writeln!(f,"{}",indent(text, "\t\t\t\t\t\t"))
-// }
-
-// fn description(f: &mut Formatter<'_>, description: &str) -> std::fmt::Result {
-//     writeln!(f, "\t{}\n",description)?;
-//     Ok(())
-// }
-
-// fn option(f: &mut Formatter<'_>, option: &str, description: &str) -> std::fmt::Result {
-//     write!(f, "{}\t{}\t{}", option.magenta(), "--".bold().purple(),description)?;
-//     Ok(())
-// }

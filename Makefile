@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 NAME = declarch
 BASE_DIR := /etc/$(NAME)
 CONFIG_FILE := $(BASE_DIR)/$(NAME).toml
@@ -16,9 +17,8 @@ define make_dir_root
 	chown root:root $(1)
 endef
 
-all: create_dirs build install cleanup
 
-create_dirs:
+install:
 	@$(call make_dir,$(BASE_DIR));
 	@echo "Created base: $(BASE_DIR).";
 	@touch $(CONFIG_FILE);
@@ -41,15 +41,13 @@ create_dirs:
 	@echo "Created base sub-directories.";
 	@install -d -m 0755 -o $(USER) -g users $(DATA_DIR);
 	@echo "Created declarch data-dir.";
+	@install -Dm 755 ./target/release/$(NAME) -t $(BIN_DIR)
+	@install -Dm 755 ./target/release/$(NAME)Root -t $(BIN_DIR)
+	@echo "Moved binaries to /usr/bin"
 
 
 build:
 	@cargo build --release
-
-
-install:
-	@install -Dm 755 ./target/release/$(NAME) -t $(BIN_DIR)
-	@install -Dm 755 ./target/release/$(NAME)Root -t $(BIN_DIR)
 
 
 setup:
@@ -58,3 +56,9 @@ setup:
 
 cleanup:
 	@cargo clean
+
+uninstall:
+	@cargo clean
+	@rm -r $(DATA_DIR)
+	@rm $(BIN_DIR)/$(NAME)
+	@rm $(BIN_DIR)/$(NAME)Root

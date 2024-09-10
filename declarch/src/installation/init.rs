@@ -1,11 +1,27 @@
-use std::{io::{BufRead, BufReader}, process::{Command, Stdio}};
+/*
+Copyright (C) 2024  StarlightStargaze
 
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+use std::{io::{BufRead, BufReader}, path::PathBuf, process::{Command, Stdio}};
+use colored::Colorize;
 use regex::Regex;
 use toml::Value;
 
 use crate::manage_data::tools::{get_array, get_string};
 
-use super::{database::database::{PackDatabase, PackStatements}, installers::{Arch, Builder, Flatpak, Prog, Vsc}};
+use super::{database::database::{PackDatabase, PackStatements}, installers::{Arch, Builder, Debian, Flatpak, Prog, Vsc}};
 
 pub enum Err {
     TooMany,
@@ -14,6 +30,7 @@ pub enum Err {
 
 pub enum Manager {
     Arch,
+    Debian,
     Vsc,
     Vscodium,
     Flatpak,
@@ -40,6 +57,9 @@ impl Install {
             "paru" | "yay" | "pacman" => {
                 self.gather.push((title,Manager::Arch, array));
                 self.arch+=1;
+            },
+            "apt" => {
+                self.gather.push((title, Manager::Debian, array))
             }
             "vsc" | "code" | "vscode" => {
                 self.gather.push(("code".to_string(),Manager::Vsc, array));
@@ -71,7 +91,11 @@ impl Install {
                 "paru" | "yay" | "pacman" => {
                     Arch::new(title).prog.init(packages, &mut statements);
                     false
-                }
+                },
+                "apt" => {
+                    Debian::new(&title).prog.init(packages, &mut statements);
+                    false
+                },
                 &_ => {true}
             }
         });
@@ -89,18 +113,23 @@ impl Install {
 
 impl Prog {
     fn init(&mut self, packages: &Vec<Value>, statements: &mut PackStatements) {
-        let installed = format!("{:?}",self.checker());
-        self.packages = self.convert_to_string(packages);
-        for package in &self.packages {
-            if !self.installed(&installed, package) {
-                self.install_command(package)
+        let bin = PathBuf::from(format!("/usr/bin/{}",self.prog));
+        if bin.exists() {
+            let installed = format!("{:?}",self.checker());
+            self.packages = self.convert_to_string(packages);
+            for package in &self.packages {
+                if !self.installed(&installed, package) {
+                    self.install_command(package)
+                }
+                if statements.update.execute((package, &self.prog)).unwrap() == 0 {
+                    statements.insert.execute((package, &self.prog)).unwrap();
+                }
             }
-            if statements.update.execute((package, &self.prog)).unwrap() == 0 {
-                statements.insert.execute((package, &self.prog)).unwrap();
-            }
+            self.uninstall(statements);
         }
-        self.uninstall(statements);
-
+        else {
+            println!("{}",format!("{} is not installed on your system.",self.prog).red())
+        }
     }
 
     fn uninstall(&self, statements: &mut PackStatements) {
@@ -124,7 +153,7 @@ impl Prog {
     }
 
     fn installed(&self, installed: &str, mtch: &str) -> bool {
-        let reg = "\\\"|\\\\n|\\\\t| ";
+        let reg = "\\\"|\\\\n|\\\\t| |/";
         let reg = &format!("({}|^){}({}|$)",&reg,&mtch,&reg);
         let re = Regex::new(reg).unwrap();
         return re.is_match(installed);
