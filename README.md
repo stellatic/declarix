@@ -28,7 +28,6 @@ Right now, the package managers Declarch supports are mainly for Debian and Arch
 "[drive]" = "mnt/SecDrive"
 
 [paths]
-[paths]
 [paths.system]
 home = [
     [".zshrc", ".zshrc"],
