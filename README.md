@@ -35,7 +35,7 @@ home = [
     [".themes", ".themes"]
 ]
 
-other = [
+generic = [
     ["[drive]Music", "[home]Music"]
 ]
     
