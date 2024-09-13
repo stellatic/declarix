@@ -75,8 +75,8 @@ impl <'conn>PreparedStatements <'conn> {
         }
     }
 
-    pub fn special_insert(&mut self, link: &Link) -> Result<(), Error> {
-        self.insert.secondary.execute((link.hash as i64, &link.special_source, 0, &link.order))?;
+    pub fn special_insert(&mut self, link: &Link, nanos: &i64) -> Result<(), Error> {
+        self.insert.secondary.execute((link.hash as i64, &link.special_source, nanos, &link.order))?;
         Ok(())
     }
 

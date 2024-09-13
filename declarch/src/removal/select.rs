@@ -67,22 +67,22 @@ impl Select for SecondaryPool {
     }
 }
 impl <'conn>Removal<'conn> {
-    pub fn key_select(&mut self, setting: &Setting, title: &Title) -> Result<(), Error> {
+    pub fn key_select(&mut self, setting: &Setting, title: &Title) {
         let title = title.to_string();
         let stmt = match setting {
             Setting::Link => &mut self.link_select,
             _ => &mut self.select.primary
         };
         let rows: Result<Vec<Key>, Error> = stmt.query_map([title.to_string()], |row| {
-            Key::new(row)
-        })?.collect();
+            let key = Key::new(row)?;
+            Ok(key)
+        }).unwrap().collect();
         match setting {
-            Setting::Link => self.link_remove(&rows?),
-            _ => self.paths_select(&rows?)?,
+            Setting::Link => self.link_remove(&rows.unwrap()),
+            _ => self.paths_select(&rows.unwrap()).unwrap(),
         }
-        //self.delete.primary.execute([&title])?;
-        self.zero.primary.execute([&title])?;
-        Ok(())
+        self.delete.primary.execute([&title]).unwrap();
+        self.zero.primary.execute([&title]).unwrap();
     }
 
     pub fn link_remove(&mut self, stmt: &Vec<Key>) {
@@ -121,8 +121,8 @@ impl <'conn>Removal<'conn> {
                     }
                 }
             }
-            self.delete.secondary.execute([id])?;
-            self.zero.secondary.execute([id])?;
+            self.delete.secondary.execute([id]).unwrap();
+            self.zero.secondary.execute([id]).unwrap();
         }
         Ok(())
     }
@@ -133,8 +133,32 @@ pub struct Key {
     pub hash: i64,
     pub source: String,
     pub destination: String,
-    pub category: String
+    pub category: String,
 }
+
+pub trait Remove {
+    fn symlink_remove(&self, source: &str, destination: &PathBuf) -> bool {
+        let source = PathBuf::from(source);
+        let mut to_remove = false;
+        match fs::canonicalize(&destination) {
+            Ok(source_link) => {
+                if source_link == source {
+                    to_remove = true;
+                }
+            },
+            Err(err) => {
+                match err.kind() {
+                    std::io::ErrorKind::NotFound => to_remove = true,
+                    _ => {}
+                }
+            }
+        }
+        to_remove
+    }
+}
+
+impl Remove for Key {}
+impl Remove for Path {}
 
 impl Key {
     fn new(row: &Row) -> Result<Self, Error> {
@@ -151,20 +175,7 @@ impl Key {
             let mut to_remove = false;
             if destination.is_file() || destination.is_symlink() {
                 if destination.is_symlink() {
-                    let source = PathBuf::from(&self.source);
-                    match fs::canonicalize(&destination) {
-                        Ok(source_link) => {
-                            if source_link == source {
-                                to_remove = true;
-                            }
-                        },
-                        Err(err) => {
-                            match err.kind() {
-                                std::io::ErrorKind::NotFound => to_remove = true,
-                                _ => {}
-                            }
-                        }
-                    }
+                    to_remove = self.symlink_remove(&self.source, &destination);
                 } else if destination.is_file() {
                     if self.get_met(&self.source).modified().unwrap() == self.get_met(&self.destination).modified().unwrap() {
                         to_remove = true;
@@ -190,9 +201,7 @@ impl Path {
             if destination.is_file() || destination.is_symlink() {
                 let mut to_remove = false;
                 if destination.is_symlink() {
-                    if self.source == fs::canonicalize(destination).unwrap() {
-                        to_remove = true;
-                    }
+                    to_remove = self.symlink_remove(&self.source.display().to_string(), &self.destination)
                 } else if self.modified == self.get_nanos(&self.destination) {
                     to_remove = true;
                 }

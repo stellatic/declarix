@@ -38,33 +38,20 @@ pub trait Operation {
         Command::new("sudo").arg("declarchRoot").arg(op.to_string()).args(arg).output().unwrap();
     }
 
-    fn check_perms(&self) -> bool;
-    fn source_met(&self) -> Metadata;
-    fn dest_met(&self) -> Metadata;
+    fn check_perms(&self, path: impl AsRef<Path>) -> bool {
+        let path = self.get_met(path);
+        path.uid() == get_current_uid() && path.gid() == get_current_gid()
+    }
     fn operations(&self, op: Ops, args: Vec<impl AsRef<Path> + AsRef<OsStr>>) -> Result<(), std::io::Error> {
-        if self.check_perms() {
+        if self.check_perms(&args[0]) {
             match op {
-                Ops::Symlink => {
-                    symlink(&args[0], &args[1])?;
-                },
-                Ops::Copy => {
-                    copy_file(&args[0], &args[1])?
-                },
-                Ops::Create_Dir => {
-                    fs::create_dir(&args[0])?;
-                },
-                Ops::Create_Dir_All => {
-                    fs::create_dir_all(&args[0])?;
-                },
-                Ops::Hardlink => {
-                    fs::hard_link(&args[0], &args[1])?;
-                },
                 Ops::Rm_Dir => {
                     fs::remove_dir(&args[0])?;
                 },
                 Ops::Rm_File => {
                     fs::remove_file(&args[0])?;
-                }
+                },
+                _ => {}
             }
         } else {
             self.run_command(op, args)
@@ -76,29 +63,36 @@ pub trait Operation {
     }
 }
 
-macro_rules! impl_operations {
-    ($struct_name:ident) => {
-        impl Operation for $struct_name {
-            fn source_met(&self) -> Metadata {
-                self.get_met(&self.source)
+impl Operation for Key {}
+impl Operation for Poth {}
+
+impl Operation for Link {
+    fn operations(&self, op: Ops, args: Vec<impl AsRef<Path> + AsRef<OsStr>>) -> Result<(), std::io::Error> {
+        if self.check_perms(&args[0]) {
+            match op {
+                Ops::Symlink => {
+                    symlink(&args[0], &args[1])?;
+                },
+                Ops::Copy => {
+                    copy_file(&args[0], &args[1])?
+                },
+                Ops::Create_Dir => {
+                    fs::create_dir(&args[1])?;
+                },
+                Ops::Create_Dir_All => {
+                    fs::create_dir_all(&args[0])?;
+                },
+                Ops::Hardlink => {
+                    fs::hard_link(&args[0], &args[1])?;
+                },
+                _ => {}
             }
-    
-            fn dest_met(&self) -> Metadata {
-                self.get_met(&self.destination)
-            }
-    
-            fn check_perms(&self) -> bool {
-                let source = &self.source_met();
-                source.uid() == get_current_uid() && source.gid() == get_current_gid()
-            }
+        } else {
+            self.run_command(op, args)
         }
+        Ok(())
     }
 }
-
-
-impl_operations!(Key);
-impl_operations!(Poth);
-impl_operations!(Link);
 
 impl Link {
 
@@ -108,7 +102,7 @@ impl Link {
     }
 
     pub fn create_dir(&self) -> Result<(), io::Error> {
-        self.operations(Ops::Create_Dir, vec![&self.destination])?;
+        self.operations(Ops::Create_Dir, vec![&self.source, &self.destination])?;
         Ok(())
     }
 

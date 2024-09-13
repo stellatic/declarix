@@ -20,6 +20,6 @@ use super::database::Removal;
 
 impl <'conn>Removal<'conn> {
     pub fn removal(&mut self, setting: &Setting, title: &Title) {
-        self.key_select(setting, title).unwrap();
+        self.key_select(setting, title);
     }
 }

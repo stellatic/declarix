@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use std::{fs, io, os::unix::fs::MetadataExt};
+use std::{fs::{self, Metadata}, io, os::unix::fs::MetadataExt};
 use colored::Colorize;
 use rusqlite::Result;
 use crate::{database::database::PreparedStatements, structures::structs::{ Link, Set,  Setting}};
@@ -48,13 +48,14 @@ impl Link {
                 self.symlink_test();
             }
         } else {
+            let mut nanos = 0;
             self.if_exists()?;
             if self.source.is_file() {
-                self.symlink()?;
+                nanos = self.symlink()?;
             } else {
                 self.create_dir()?;
             }
-            statements.special_insert(self).unwrap();
+            statements.special_insert(self, &nanos).unwrap();
         }
         Ok(())
     }
@@ -72,7 +73,7 @@ impl Link {
         } else {
             self.if_exists()?;
             self.symlink()?;
-            statements.link_insert_update(self).unwrap();
+            statements.link_insert_update(self);
         }
         Ok(())
     }
@@ -90,18 +91,27 @@ impl Link {
         Ok(())
     }
 
-    fn symlink(&self) -> Result<(), io::Error> {
+    fn symlink(&self) -> Result<i64, io::Error> {
+        let mut nanos = 0;
         if matches!(&self.set, Set::Root) {
-            let (source, destination) = (self.get_met(&self.source.display().to_string()).dev(), self.get_met(self.destination.display().to_string()).dev());
+            let (source, destination) = (self.source_met().dev(), self.dest_met().dev());
             if source == destination {
                 self.hard_link()?;
+                nanos = self.get_nanos(&self.destination);
             } else {
-                self.operations(Ops::Symlink, vec![&self.source, &self.destination])?
+                self.operations(Ops::Symlink, vec![&self.source, &self.destination])?;
             }
         } else {
             self.operations(Ops::Symlink, vec![&self.source, &self.destination])?
         }
-        Ok(())
+        Ok(nanos)
+    }
+    fn source_met(&self) -> Metadata {
+        self.get_met(&self.source)
+    }
+
+    fn dest_met(&self) -> Metadata {
+        self.get_met(&self.destination)
     }
 
     fn symlink_test(&mut self) {

@@ -60,11 +60,10 @@ impl <'conn> PreparedStatements<'conn> {
         }
         Ok(())
     }
-    pub fn link_insert_update(&mut self, link: &Link) -> Result<(), Error> {
-        if self.update_primary(link.hash)? == 0 {
+    pub fn link_insert_update(&mut self, link: &Link) {
+        if self.update_primary(link.hash).unwrap() == 0 {
             self.link_insert(link).unwrap();
         }
-        Ok(())
     }
 
     pub fn update_primary(&mut self, id: u64) -> Result<usize, Error> {
