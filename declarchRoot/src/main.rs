@@ -32,7 +32,7 @@ fn main()  {
             copy_file(&PathBuf::from(&args[2]), &PathBuf::from(&args[3])).unwrap();
         }
         Ops::Create_Dir => {
-            std::fs::create_dir(&args[2]).unwrap();
+            std::fs::create_dir(&args[3]).unwrap();
         },
         Ops::Rm_Dir => {
             std::fs::remove_dir(&args[2]).unwrap();
