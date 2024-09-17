@@ -21,7 +21,7 @@ use term_size::dimensions;
 use colored::Colorize;
 use toml::{Table, Value};
 
-use crate::{database::database::{Database, PreparedStatements}, installation::init::{Err, Install}, manage_data::tools::get_table, structures::structs::{Construct, Set, Setting}};
+use crate::{database::database::{Database, PreparedStatements}, installation::init::{Err, Install}, manage_data::tools::get_table, services::services::Service, structures::structs::{Construct, Set, Setting}};
 
 
 pub struct Connect {
@@ -29,6 +29,7 @@ pub struct Connect {
     conf: PathBuf,
     link: (bool, Vec<String>),
     install: (bool, Vec<String>),
+    service: (bool, Vec<String>),
     force: Force,
     mode: Mode,
     pub vec: (Vec<String>, bool, Set)
@@ -74,6 +75,7 @@ enum Mode {
     Link,
     Install,
     Config,
+    Service,
     None,
 }
 
@@ -145,7 +147,8 @@ impl Connect {
             force: Force::None,
             mode: Mode::None,
             conf: PathBuf::from("/etc/declarch/declarch.toml"),
-            vec: (Vec::new(), true, Set::None)
+            vec: (Vec::new(), true, Set::None),
+            service: (false, Vec::new())
         }
     }
 
@@ -162,6 +165,10 @@ impl Connect {
                             self.config_file.0 = true;
                             self.mode = Mode::Config;
                         },
+                        "-s" | "--service" => {
+                            self.service.0 = true;
+                            self.mode = Mode::Service;
+                        }
                         "-l" | "--link" => {
                             self.link.0 = true;
                             self.mode = Mode::Link;
@@ -196,6 +203,9 @@ impl Connect {
                         },
                         Mode::Install => {
                             self.install.1.push(arg.to_string().to_lowercase());
+                        },
+                        Mode::Service => {
+                            self.service.1.push(arg.to_string().to_lowercase());
                         },
                         Mode::None => {
                             println!("{}",OptionError::InvalidOption(arg))
@@ -252,6 +262,18 @@ impl Connect {
                     installer.structure()
                 }
             }
+
+            if self.service.0 {
+                let service = Service::new();
+                let services = conf.get("services");
+                if let Some(services) = services {
+                    for (title, s) in get_table("services", services) {
+                        if self.service.1.is_empty() || self.service.1.contains(&title.to_lowercase()) {
+                            service.match_service(&title, &s);
+                        }
+                    }
+                }
+            }
         } else {
             let conf = fs::read_to_string(&self.conf).unwrap();
             let conf:Table = toml::from_str(&conf).unwrap();
@@ -274,6 +296,13 @@ impl Connect {
                     installer.matches(&title, &inst)?
                 }
                 installer.structure()
+            }
+
+            let services = Service::new();
+            if let Some(service) = conf.get("services") {
+                for (title, serv) in get_table("services", &service) {
+                    services.match_service(&title, &serv)
+                }
             }
         }
         Ok(())
@@ -317,6 +346,9 @@ Options:
             
     -i, --install       Only installs based on provided config
     (Options explained under \"Install\")
+
+    -s, --services      Only enables/disables based on provided config
+    (Options explained under \"Service\")
             
 Link:
     -l, --link <list of paths>      
@@ -336,6 +368,16 @@ Install:
         
     Example:
         declarch -i vsc flatpak paru
+
+Service:
+    -s, --services <list of service managers>
+        
+        Alone will use all service managers provided in your config
+
+        Providing a list of service managers allows you to select which managers to use.
+
+    Example:
+        declarch -s systemd
         ";
 
         let terminal_width = dimensions().map(|w|w.0).unwrap_or(80 as usize);

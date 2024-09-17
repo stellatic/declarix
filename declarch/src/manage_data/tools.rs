@@ -15,7 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 use core::fmt;
-use std::{hash::{DefaultHasher, Hash, Hasher}, process::exit};
+use std::{hash::{DefaultHasher, Hash, Hasher}, io::{BufRead, BufReader}, process::{exit, Command, Stdio}};
 use colored::Colorize;
 use toml::{map::Map, Value};
 
@@ -85,4 +85,22 @@ pub fn calculate_hash(source: &str, destination: &str) -> u64 {
     source.hash(&mut hasher);
     destination.hash(&mut hasher);
     hasher.finish()
+}
+
+pub fn get_buffer(manager: &str, args: &Vec<String>, prog: &Vec<String>) {
+    let stdout = Command::new(manager).args(args).args(prog).stderr(Stdio::piped()).spawn().unwrap().stderr.unwrap();
+
+    let reader = BufReader::new(stdout);
+
+    reader.lines().filter_map(|line| line.ok()).for_each(|line| println!("{}",line))
+}
+
+pub fn checker(prog: &str, checker: &Vec<String>) -> String {
+    String::from_utf8(Command::new(prog).args(checker).stdout(Stdio::piped()).output().unwrap().stdout).unwrap()
+}
+
+pub fn convert_to_string<'a>(values: &Vec<Value>) -> Vec<String> {
+    values.iter().map(|value|{
+        get_string(value)
+    }).collect()
 }

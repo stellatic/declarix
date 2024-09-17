@@ -23,6 +23,7 @@ mod linking;
 pub mod installation;
 mod database;
 mod connect;
+mod services;
 pub mod removal;
 use users::{get_current_gid, get_current_uid};
 use colored::Colorize;
