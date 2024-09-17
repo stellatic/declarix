@@ -10,10 +10,16 @@ The **Declarch Wiki** contains instructions for installing and configuring.
 ### Package Management
 `declarch` acts as a wrapper for a number of package managers.
 All you do is list the packages, and Declarch will install them in order.
-Right now, the package managers Declarch supports are mainly for Debian and Arch, but more are soon to be supported.
+Declarch supports Arch, Debian and OpenSUSE, more yet to come.
+
+### Service Management
+`declarch` also acts as a wrapper for service managers like systemctl.
+List the services under their manager in the config, and they will be enabled/disabled.
+Declarch only supports systemd currently.
 
 **These are:**
 - pacman
+- zypper
 - apt
 - paru
 - yay
@@ -59,5 +65,16 @@ vsc = [
     "bungcip.better-toml",
     "catppuccin.catppuccin-vsc",
     "esbenp.prettier-vscode"
+]
+
+[services]
+[services.systemd]
+user = [
+    "pipewire",
+    "mpd"
+]
+
+root = [
+    "NetworkManager"
 ]
 ```
