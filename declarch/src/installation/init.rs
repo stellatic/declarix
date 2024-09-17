@@ -14,14 +14,14 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use std::{io::{BufRead, BufReader}, path::PathBuf, process::{Command, Stdio}};
+use std::path::PathBuf;
 use colored::Colorize;
 use regex::Regex;
 use toml::Value;
 
-use crate::manage_data::tools::{get_array, get_string};
+use crate::manage_data::tools::{checker, convert_to_string, get_array, get_buffer};
 
-use super::{database::database::{PackDatabase, PackStatements}, installers::{Arch, Builder, Debian, Flatpak, Prog, Vsc}};
+use super::{database::database::{PackDatabase, PackStatements}, installers::{Arch, Builder, Debian, Flatpak, OpenSUSE, Prog, Vsc}};
 
 pub enum Err {
     TooMany,
@@ -31,6 +31,7 @@ pub enum Err {
 pub enum Manager {
     Arch,
     Debian,
+    OpenSUSE,
     Vsc,
     Vscodium,
     Flatpak,
@@ -60,6 +61,9 @@ impl Install {
             },
             "apt" => {
                 self.gather.push((title, Manager::Debian, array))
+            },
+            "zypper" => {
+                self.gather.push((title, Manager::OpenSUSE, array));
             }
             "vsc" | "code" | "vscode" => {
                 self.gather.push(("code".to_string(),Manager::Vsc, array));
@@ -96,6 +100,10 @@ impl Install {
                     Debian::new(&title).prog.init(packages, &mut statements);
                     false
                 },
+                "zypper" => {
+                    OpenSUSE::new(&title).prog.init(packages, &mut statements);
+                    false
+                }
                 &_ => {true}
             }
         });
@@ -115,15 +123,19 @@ impl Prog {
     fn init(&mut self, packages: &Vec<Value>, statements: &mut PackStatements) {
         let bin = PathBuf::from(format!("/usr/bin/{}",self.prog));
         if bin.exists() {
-            let installed = format!("{:?}",self.checker());
-            self.packages = self.convert_to_string(packages);
+            let installed = format!("{:?}",checker(&self.prog, &self.checker));
+            self.packages = convert_to_string(packages);
+            let mut to_install = Vec::new();
             for package in &self.packages {
                 if !self.installed(&installed, package) {
-                    self.install_command(package)
+                    to_install.push(package.to_string());
                 }
                 if statements.update.execute((package, &self.prog)).unwrap() == 0 {
                     statements.insert.execute((package, &self.prog)).unwrap();
                 }
+            }
+            if !to_install.is_empty() {
+                self.install_command(&to_install);
             }
             self.uninstall(statements);
         }
@@ -137,19 +149,23 @@ impl Prog {
             let value:String = row.get(0)?;
             Ok(value)
         }).unwrap();
+        let mut to_uninstall = Vec::new();
         for package in pack_iter {
-            self.uninstall_command(&package.unwrap())
+            to_uninstall.push(package.unwrap())
+        }
+        if !to_uninstall.is_empty() {
+            self.uninstall_command(&to_uninstall);
         }
         statements.remove.execute([&self.prog]).unwrap();
         statements.zero.execute([&self.prog]).unwrap();
     }
 
-    fn install_command(&self, prog: &str) {
-        self.get_buffer(&self.install, prog)
+    fn install_command(&self, prog: &Vec<String>) {
+        get_buffer(&self.prog, &self.install, prog)
     }
 
-    fn uninstall_command(&self, prog: &str) {
-        self.get_buffer(&self.uninstall, prog)
+    fn uninstall_command(&self, prog: &Vec<String>) {
+        get_buffer(&self.prog, &self.uninstall, prog)
     }
 
     fn installed(&self, installed: &str, mtch: &str) -> bool {
@@ -157,27 +173,5 @@ impl Prog {
         let reg = &format!("({}|^){}({}|$)",&reg,&mtch,&reg);
         let re = Regex::new(reg).unwrap();
         return re.is_match(installed);
-    }
-
-    fn get_buffer(&self, args: &Vec<String>, prog: &str) {
-        let stdout = self.command().args(args).arg(prog).stderr(Stdio::piped()).spawn().unwrap().stderr.unwrap();
-
-        let reader = BufReader::new(stdout);
-
-        reader.lines().filter_map(|line| line.ok()).for_each(|line| println!("{}",line))
-    }
-
-    fn checker(&self) -> String {
-        String::from_utf8(self.command().args(&self.checker).stdout(Stdio::piped()).output().unwrap().stdout).unwrap()
-    }
-
-    fn command(&self) -> Command {
-        Command::new(&self.prog)
-    }
-
-    fn convert_to_string(&self, values: &Vec<Value>) -> Vec<String> {
-        values.iter().map(|value|{
-            get_string(value)
-        }).collect()
     }
 }

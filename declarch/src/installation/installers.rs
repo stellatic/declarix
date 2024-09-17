@@ -50,6 +50,10 @@ pub struct Debian {
     pub prog: Prog
 }
 
+pub struct OpenSUSE {
+    pub prog: Prog
+}
+
 pub trait Builder {
     fn new(prog: &str) -> Self;
 }
@@ -62,6 +66,17 @@ impl Builder for Debian {
                 [prog, "-y", "remove"], 
                 [prog, "list", "--installed"]
             )
+        }
+    }
+}
+
+impl Builder for OpenSUSE {
+    fn new(prog: &str) -> Self {
+        Self {
+            prog: Prog::new("sudo",
+            [prog, "-n", "install"],
+            [prog, "-n", "remove"],
+            [prog, "search", "-i"])
         }
     }
 }
