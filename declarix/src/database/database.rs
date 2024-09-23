@@ -14,10 +14,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use dirs::data_dir;
 use rusqlite::{Connection, Error, Statement};
 
-use crate::{removal::database::Removal, structures::structs::Link};
+use crate::{manage_data::tools::create_db, removal::database::Removal, structures::structs::Link};
 
 use super::{copy::Copy, create::Create};
 
@@ -27,8 +26,7 @@ pub struct Database {
 
 impl Database {
     pub fn new() -> Self  {
-        let conn = Connection::open(data_dir().unwrap().join("declarch").join("tracker.db")).unwrap();
-        Self { conn }
+        Self { conn: Connection::open(create_db("paths")).unwrap() }
     }
 }
 pub struct PrimaryPool {}

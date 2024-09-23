@@ -32,15 +32,15 @@ fn main() /*-> Result<(), Error>*/ {
     if get_current_gid() == 0 || get_current_uid() == 0 {
         println!(
 "{}
-Declarch already checks file permissions before linking/copying, and will request you to enter sudo.
-After you are requested, Declarch has another binary called \"declarchRoot\" which handles files/directories with root permissions.
-This binary is ran separately so Declarch itself never runs as root.
+declarix already checks file permissions before linking/copying, and will request you to enter sudo.
+After you are requested, declarix has another binary called \"declarixRoot\" which handles files/directories with root permissions.
+This binary is ran separately so declarix itself never runs as root.
 Running the whole program with sudo will cause file/directory permission issues, so it has been disabled.",
-"Using Declarch with sudo is dangerous.".red());
+"Using declarix with sudo is dangerous.".red());
     exit(1);
     }
     let mut connect = Connect::new();
-    connect.everything();
+    connect.everything().unwrap();
     for a in connect.vec.0 {
         println!("{a}")
     }

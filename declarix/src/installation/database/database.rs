@@ -14,10 +14,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-use std::fs;
-
-use dirs::data_dir;
 use rusqlite::{Connection, Statement};
+
+use crate::manage_data::tools::create_db;
 
 pub struct PackDatabase {
     pub conn: Connection
@@ -25,13 +24,7 @@ pub struct PackDatabase {
 
 impl PackDatabase {
     pub fn new() -> Self {
-        let mut db = data_dir().unwrap().join("declarch");
-        if ! db.exists() {
-            fs::create_dir_all(&db).unwrap();
-        }
-        db = db.join("packages.db");
-
-        Self { conn: Connection::open(db).unwrap() }
+        Self { conn: Connection::open(create_db("packages")).unwrap() }
     }
 
     pub fn create_table(&self) {

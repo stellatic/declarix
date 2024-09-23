@@ -27,7 +27,7 @@ impl Zero for PrimaryPool {
         format!(
             "UPDATE Prime
             SET to_keep = 0
-            WHERE to_keep = 1 AND title = ?1;"
+            WHERE to_keep = 1 AND title = ?1 AND setting = ?2;"
         )
     }
 }
@@ -50,7 +50,7 @@ impl Delete for PrimaryPool {
     fn delete(&self) -> String {
         format!(
             "DELETE FROM Prime
-            WHERE to_keep = 0 AND title = ?1;"
+            WHERE to_keep = 0 AND title = ?1 AND setting = ?2;"
         )
     }
 }
@@ -70,7 +70,6 @@ pub struct Removal<'conn> {
     pub link_select: Statement<'conn>,
     pub zero: Keys<'conn>,
     pub delete: Keys<'conn>,
-    pub test: Statement<'conn>
 }
 
 impl <'conn>Removal<'conn> {
@@ -80,7 +79,6 @@ impl <'conn>Removal<'conn> {
             link_select: conn.prepare(&pool.primary.link_select())?,
             zero: Keys::zero(conn, pool)?,
             delete: Keys::delete(conn, pool)?,
-            test: conn.prepare("SELECT to_keep FROM Prime WHERE to_keep = 0 AND title = ?1")?
         })
     }
 }

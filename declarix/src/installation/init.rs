@@ -23,6 +23,7 @@ use crate::manage_data::tools::{checker, convert_to_string, get_array, get_buffe
 
 use super::{database::database::{PackDatabase, PackStatements}, installers::{Arch, Builder, Debian, Flatpak, OpenSUSE, Prog, Vsc}};
 
+#[derive(Debug)]
 pub enum Err {
     TooMany,
     InvalidPackage

@@ -15,8 +15,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 use core::fmt;
-use std::{hash::{DefaultHasher, Hash, Hasher}, io::{BufRead, BufReader}, process::{exit, Command, Stdio}};
+use std::{fs, hash::{DefaultHasher, Hash, Hasher}, io::{BufRead, BufReader}, path::PathBuf, process::{exit, Command, Stdio}};
 use colored::Colorize;
+use dirs::data_dir;
 use toml::{map::Map, Value};
 
 enum TomlError<'a> {
@@ -103,4 +104,16 @@ pub fn convert_to_string<'a>(values: &Vec<Value>) -> Vec<String> {
     values.iter().map(|value|{
         get_string(value)
     }).collect()
+}
+
+pub fn create_db(file: &str) -> PathBuf {
+    let mut db = data_dir().unwrap().join("declarix");
+    if !db.exists() {
+        fs::create_dir_all(&db).unwrap();
+    }
+    db = db.join(format!("{}.db",file));
+    if !db.exists() {
+        fs::File::create(&db).unwrap();
+    }
+    db
 }

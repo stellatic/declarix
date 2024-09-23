@@ -28,18 +28,23 @@ impl Link {
             Setting::Link => {
                 self.link(statements)?;
             },
-            Setting::Special => {
-                self.special_link(statements)?;
+            Setting::Recursive => {
+                self.recursive(statements)?;
             },
             Setting::Copy => {
                 self.copier(statements)?;
             },
-            Setting::None => {}
+            Setting::Secure_Link => {
+                self.link(statements)?;
+            },
+            Setting::Secure_Recursive => {
+                self.recursive(statements)?;
+            },_=>{}
         }
         Ok(())
     }
 
-    fn special_link(&mut self, statements: &mut PreparedStatements) -> Result<(), io::Error> {
+    fn recursive(&mut self, statements: &mut PreparedStatements) -> Result<(), io::Error> {
         if !self.source.exists() {
             return Err(std::io::Error::new(io::ErrorKind::NotFound, format!("{}: Source Path Not Found: {}","Error".red(),self.source.display())))
         }

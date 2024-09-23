@@ -1,7 +1,7 @@
 [workspace]
 
 members = [
-    "declarch",
-    "declarchRoot",
+    "declarix",
+    "declarixRoot",
     "shared",
 ]

@@ -25,8 +25,9 @@ impl Create for PrimaryPool {
         format!(
             "CREATE TABLE IF NOT EXISTS Prime (
                 hash INTEGER NOT NULL,
-                category TEXT NOT NULL,
                 title TEXT NOT NULL,
+                category TEXT NOT NULL,
+                setting TEXT NOT NULL,
                 source TEXT NOT NULL,
                 destination TEXT NOT NULL,
                 to_keep BOOL NOT NULL

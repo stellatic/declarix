@@ -25,7 +25,7 @@ pub struct ServiceDatabase {
 
 impl ServiceDatabase {
     pub fn new() -> Self {
-        let mut db = data_dir().unwrap().join("declarch");
+        let mut db = data_dir().unwrap().join("declarix");
         if ! db.exists() {
             fs::create_dir_all(&db).unwrap();
         }

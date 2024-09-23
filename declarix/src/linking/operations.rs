@@ -35,13 +35,14 @@ pub trait Operation {
         }
     }
     fn run_command(&self, op: Ops, arg: Vec<impl AsRef<OsStr>>) {
-        Command::new("sudo").arg("declarchRoot").arg(op.to_string()).args(arg).output().unwrap();
+        Command::new("sudo").arg("declarixRoot").arg(op.to_string()).args(arg).output().unwrap();
     }
 
     fn check_perms(&self, path: impl AsRef<Path>) -> bool {
         let path = self.get_met(path);
         path.uid() == get_current_uid() && path.gid() == get_current_gid()
     }
+
     fn operations(&self, op: Ops, args: Vec<impl AsRef<Path> + AsRef<OsStr>>) -> Result<(), std::io::Error> {
         if self.check_perms(&args[0]) {
             match op {
@@ -54,6 +55,7 @@ pub trait Operation {
                 _ => {}
             }
         } else {
+            
             self.run_command(op, args)
         }
         Ok(())
@@ -64,6 +66,7 @@ pub trait Operation {
 }
 
 impl Operation for Key {}
+
 impl Operation for Poth {}
 
 impl Operation for Link {

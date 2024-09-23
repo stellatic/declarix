@@ -52,8 +52,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "declarch"
-version = "0.3.0"
+name = "declarix"
+version = "0.4.0"
 dependencies = [
  "colored",
  "dirs",
@@ -72,7 +72,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "declarchRoot"
+name = "declarixRoot"
 version = "0.1.0"
 dependencies = [
  "shared",

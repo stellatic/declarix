@@ -15,25 +15,23 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 use std::{fmt::Display, path::PathBuf, process::exit};
-use dirs::config_dir;
 use serde_derive::{Deserialize,Serialize};
 
 use crate::connect::Title;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Construct {
     pub source: String,
     pub destination: String,
     pub title: Title,
+    pub setting: Setting,
     pub source_path: String,
     pub destination_path: String,
     pub path: String,
     pub spec_src: String,
     pub spec_dec: String,
-    pub order: i64,
     pub hash: u64,
     pub set: Set,
-    pub setting: Setting,
     pub linker: Vec<Link>,
     pub vec: (Vec<String>, bool, Set)
 }
@@ -50,10 +48,11 @@ pub enum Set {
 
 impl Set {
     pub fn new(set: &str) -> Self {
-        match set {
+        match set.to_lowercase().as_str() {
             "home" => Self::Home,
             "root" => Self::Root,
             "other" => Self::Other,
+            "default" => Self::Default,
             "generic" => Self::Generic,
             &_ => {
                 //ToDo Error
@@ -63,21 +62,35 @@ impl Set {
     }
 }
 
-impl Display for Set {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+#[derive(Clone, Debug)]
+#[allow(non_camel_case_types)]
+pub enum Setting {
+    Link,
+    Recursive,
+    Copy,
+    Secure_Link,
+    Secure_Recursive,
+    None,
+}
+
+impl Setting {
+    pub fn into_iter() -> Vec<Self> {
+        vec![
+            Self::Link,
+            Self::Recursive,
+            Self::Secure_Link,
+            Self::Secure_Recursive
+        ]
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum Setting {
-    Link,
-    Special,
-    Copy,
-    None
+impl Display for Setting {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}",self)
+    }
 }
 
-impl Display for Setting {
+impl Display for Set {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }
@@ -92,45 +105,27 @@ impl Construct {
             spec_src: String::new(),
             spec_dec: String::new(),
             hash: 0,
-            order: 0,
             title: Title::None,
+            setting: Setting::None,
             source_path: String::new(),
             destination_path: String::new(),
             set: Set::Default,
-            setting: Setting::None,
             linker: Vec::new(),
             vec: (Vec::new(), true, Set::None)
         }
     }
-
-
-    pub fn set(&mut self, title: Title, setting: Setting) -> &mut Self {
-        self.title = title.clone();
-        self.setting = setting;
-        self.destination_path = destination_path(&title.to_string());
-        self.order = 0;
-        self
-    }
 }
 
-fn destination_path(title: &str) -> String {
-    if title.contains("config") {
-        return config_dir().unwrap().display().to_string()
-    } else {
-        String::new()
-    }
-}
-
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Link {
     pub hash: u64,
     pub source: PathBuf,
+    pub setting: Setting,
     pub title: Title,
     pub destination: PathBuf,
     pub special_source: String,
     pub set: Set,
     pub order: i64,
-    pub setting: Setting,
     pub vec: (Vec<String>, bool, Set)
 }
 
@@ -141,10 +136,10 @@ impl Link {
             title: construct.title.clone(),
             source: PathBuf::from(construct.source.to_string()),
             destination: PathBuf::from(construct.destination.to_string()),
+            setting: construct.setting.clone(),
             special_source: construct.path.to_string(),
             set: construct.set.clone(),
             order: order.clone(),
-            setting: construct.setting.clone(),
             vec: construct.vec.clone()
         }
     }

@@ -27,8 +27,8 @@ pub trait Insert {
 impl Insert for PrimaryPool {
     fn insert(&self) -> String {
         format!(
-            "INSERT INTO Prime (hash, category, title, source, destination, to_keep)
-                VALUES (?1, ?2, ?3, ?4, ?5, 1)
+            "INSERT INTO Prime (hash, title, category, setting, source, destination, to_keep)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1)
                 ;")
     }
 }
@@ -52,12 +52,12 @@ impl <'conn>Keys<'conn> {
 
 impl <'conn>PreparedStatements<'conn> {
     pub fn key_insert(&mut self, construct: &Construct) -> Result<(), Error> {
-        self.insert.primary.execute((construct.hash as i64, &construct.set.to_string(), &construct.title.to_string(), &construct.spec_src, &construct.spec_dec))?;
+        self.insert.primary.execute((construct.hash as i64, &construct.title.to_string(), &construct.set.to_string(), &construct.setting.to_string(), &construct.spec_src, &construct.spec_dec))?;
         Ok(())
     }
 
     pub fn link_insert(&mut self, link: &Link) -> Result<(), Error> {
-        self.insert.primary.execute((link.hash as i64, &link.set.to_string(), &link.title.to_string(), &link.source.display().to_string(), &link.destination.display().to_string()))?;
+        self.insert.primary.execute((link.hash as i64, &link.title.to_string(), &link.set.to_string(), &link.setting.to_string(), &link.source.display().to_string(), &link.destination.display().to_string()))?;
         Ok(())
     }
 }

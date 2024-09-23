@@ -47,13 +47,13 @@ pub trait Select {
 
 impl Select for PrimaryPool {
     fn select(&self) -> String {
-        format!("SELECT hash, source, destination, category FROM Prime WHERE title = ?1;")
+        format!("SELECT hash, source, destination, category, setting FROM Prime WHERE title = ?1 AND setting = ?2;")
     }
 }
 
 impl PrimaryPool {
     pub fn link_select(&self) -> String {
-        format!("SELECT hash, source, destination, category FROM Prime WHERE to_keep = 0 AND title = ?1;")
+        format!("SELECT hash, source, destination, category, setting FROM Prime WHERE to_keep = 0 AND title = ?1 AND setting = ?2;")
     }
 }
 
@@ -69,20 +69,21 @@ impl Select for SecondaryPool {
 impl <'conn>Removal<'conn> {
     pub fn key_select(&mut self, setting: &Setting, title: &Title) {
         let title = title.to_string();
+        let set = setting.to_string();
         let stmt = match setting {
-            Setting::Link => &mut self.link_select,
+            Setting::Link | Setting::Secure_Link => &mut self.link_select,
             _ => &mut self.select.primary
         };
-        let rows: Result<Vec<Key>, Error> = stmt.query_map([title.to_string()], |row| {
+        let rows: Result<Vec<Key>, Error> = stmt.query_map([&title, &set], |row| {
             let key = Key::new(row)?;
             Ok(key)
         }).unwrap().collect();
         match setting {
-            Setting::Link => self.link_remove(&rows.unwrap()),
+            Setting::Link | Setting::Secure_Link => self.link_remove(&rows.unwrap()),
             _ => self.paths_select(&rows.unwrap()).unwrap(),
         }
-        self.delete.primary.execute([&title]).unwrap();
-        self.zero.primary.execute([&title]).unwrap();
+        self.delete.primary.execute([&title, &set]).unwrap();
+        self.zero.primary.execute([&title, &set]).unwrap();
     }
 
     pub fn link_remove(&mut self, stmt: &Vec<Key>) {
@@ -134,6 +135,7 @@ pub struct Key {
     pub source: String,
     pub destination: String,
     pub category: String,
+    pub setting: String,
 }
 
 pub trait Remove {
@@ -167,9 +169,11 @@ impl Key {
             source: row.get(1)?,
             destination: row.get(2)?,
             category: row.get(3)?,
+            setting: row.get(4)?,
         })
     }
     fn removal(&self) -> Result<(),io::Error> {
+        
         let destination = PathBuf::from(&self.destination);
         if destination.exists() || destination.is_symlink() {
             let mut to_remove = false;
@@ -182,7 +186,7 @@ impl Key {
                     }
                 }
                 if to_remove == true {
-                    self.remove_file()?
+                    self.remove_file().unwrap()
                 }
             }
         }
@@ -224,6 +228,7 @@ impl Path {
     }
 }
 
+#[derive(Debug)]
 pub struct Path {
     pub source: PathBuf,
     pub destination: PathBuf,

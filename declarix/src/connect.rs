@@ -83,30 +83,14 @@ enum Mode {
 #[allow(non_camel_case_types)]
 pub enum Title {
     Config,
-    Special_Config,
-    Secure_Config,
-    Secure_Special_Config,
     System,
-    Special_System,
-    Secure_System,
-    Secure_Special_System,
-    Backup,
-    Secure_Backup,
     None,
 }
 impl Title {
     fn into_iter() -> Vec<Self> {
         vec![
             Title::Config,
-            Title::Special_Config,
-            Title::Secure_Config,
-            Title::Secure_Special_Config,
             Title::System,
-            Title::Special_System,
-            Title::Secure_System,
-            Title::Secure_Special_System,
-            Title::Backup,
-            Title::Secure_Backup,
             ]
     }
 }
@@ -124,15 +108,7 @@ impl FromStr for Title {
         let s = s.to_lowercase();
         match s.as_str() {
             "config" => Ok(Title::Config),
-            "special_config" => Ok(Title::Special_Config),
-            "secure_config" => Ok(Title::Secure_Config),
-            "secure_special_config" => Ok(Title::Secure_Special_Config),
             "system" => Ok(Title::System),
-            "special_system" => Ok(Title::Special_System),
-            "secure_system" => Ok(Title::Secure_System),
-            "secure_special_system" => Ok(Title::Secure_Special_System),
-            "backup" => Ok(Title::Backup),
-            "secure_backup" => Ok(Title::Secure_Backup),
             &_ => {Err("Invalid".to_string())}
         }
     }
@@ -146,7 +122,7 @@ impl Connect {
             install: (false, Vec::new()),
             force: Force::None,
             mode: Mode::None,
-            conf: PathBuf::from("/etc/declarch/declarch.toml"),
+            conf: PathBuf::from("/etc/declarix/declarix.toml"),
             vec: (Vec::new(), true, Set::None),
             service: (false, Vec::new())
         }
@@ -230,7 +206,7 @@ impl Connect {
                 let mut statements = PreparedStatements::new(&db.conn);
                 db.conn.execute("BEGIN TRANSACTION", ()).unwrap();
                 let aliases = self.get_alias(&conf);
-                let paths = conf.get("paths");
+                let paths = conf.get("system");
                 let config_path = conf.get("locations");
                 let mut construct = Construct::new();
                 if self.link.1.is_empty() {
@@ -281,7 +257,7 @@ impl Connect {
             let mut statements = PreparedStatements::new(&db.conn);
             db.conn.execute("BEGIN TRANSACTION", ()).unwrap();
             let aliases = self.get_alias(&conf);
-            let paths = conf.get("paths");
+            let paths = conf.get("system");
             let config_path = conf.get("locations");
             let mut construct = Construct::new();
             for title in Title::into_iter() {
@@ -308,21 +284,15 @@ impl Connect {
         Ok(())
     }
     fn paths_process(&mut self, title: Title, config_path: &Option<&Value>, statements: &mut PreparedStatements, aliases: &Table, paths: Option<&Value>, construct: &mut Construct) {
+        construct.title = title.clone();
         match &title {
-            Title::Config | Title::Secure_Config => {
-                construct.set(title.clone(), Setting::Link).process_config(config_path, statements);
+            Title::Config => {
+                for setting in Setting::into_iter() {
+                    construct.process_config(setting, config_path, statements)
+                }
             },
-            Title::Special_Config | Title::Secure_Special_Config => {
-                construct.set(title.clone(), Setting::Special).process_config(&config_path, statements);
-            },
-            Title::System | Title::Secure_System => {
-                construct.set(title.clone(), Setting::Link).process_paths(&config_path, aliases,&paths, statements);
-            },
-            Title::Special_System | Title::Secure_Special_System => {
-                construct.set(title.clone(), Setting::Special).process_paths(&config_path, aliases, &paths, statements);
-            },
-            Title::Backup | Title::Secure_Backup => {
-                construct.set(title.clone(), Setting::Copy).process_paths(&config_path, aliases, &paths, statements);
+            Title::System => {
+                construct.process_paths(&config_path, &paths, aliases, statements);
             },
             Title::None => {}
         }
@@ -330,16 +300,16 @@ impl Connect {
 
     fn help_text(&self) -> String {
         let help_text = "
-Declarch
+Declarix
 A declarative system management tool for various platforms. 
 Usage:
-    declarch [Options] [Sub-Options] <COMMANDS>
+    declarix [Options] [Sub-Options] <COMMANDS>
 
 Options: 
     -h, --help          Show this help message
 
     -c, --config        Declare config location
-                        (Default: /etc/declarch/declarch.toml)
+                        (Default: /etc/declarix/declarix.toml)
             
     -l, --link          Only links based on provided config 
     (Options Explained under \"Link\")
@@ -357,7 +327,7 @@ Link:
         Providing a list of paths allows you to select which paths to link
     
     Example:
-        declarch -l config backup special_config
+        declarix -l config backup system
 
 Install:
     -i, --install <list of managers> 
@@ -367,7 +337,7 @@ Install:
         Providing a list of managers allows you to select which managers to use.
         
     Example:
-        declarch -i vsc flatpak paru
+        declarix -i vsc flatpak paru
 
 Service:
     -s, --services <list of service managers>
@@ -377,7 +347,7 @@ Service:
         Providing a list of service managers allows you to select which managers to use.
 
     Example:
-        declarch -s systemd
+        declarix -s systemd
         ";
 
         let terminal_width = dimensions().map(|w|w.0).unwrap_or(80 as usize);
