@@ -54,6 +54,10 @@ pub struct OpenSUSE {
     pub prog: Prog
 }
 
+pub struct Fedora {
+    pub prog: Prog
+}
+
 pub trait Builder {
     fn new(prog: &str) -> Self;
 }
@@ -77,6 +81,17 @@ impl Builder for OpenSUSE {
             [prog, "-n", "install"],
             [prog, "-n", "remove"],
             [prog, "search", "-i"])
+        }
+    }
+}
+
+impl Builder for Fedora {
+    fn new(prog: &str) -> Self {
+        Self {
+            prog: Prog::new("sudo",
+            [prog, "-y", "install"],
+            [prog, "-y", "uninstall"], 
+            [prog, "--installed", "list"])
         }
     }
 }

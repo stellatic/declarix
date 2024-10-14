@@ -1,3 +1,4 @@
+use core::fmt;
 use std::fmt::Display;
 /*
 Copyright (C) 2024  StarlightStargaze
@@ -138,7 +139,7 @@ impl Construct {
         self.source = path.clone();
         self.destination = format!("{}{}",&self.spec_dec,self.path);
     }
-    pub fn get_special(&mut self, statements: &mut PreparedStatements) {
+    pub fn get_special(&mut self, statements: &mut PreparedStatements) -> Result<(), SymlinkCheck> {
         self.spec_src = PathBuf::from(&self.source).parent().unwrap().display().to_string();
         self.spec_dec = PathBuf::from(&self.destination).parent().unwrap().display().to_string();
         let walkdir = WalkDir::new(&self.source);
@@ -146,6 +147,9 @@ impl Construct {
         for (i, path) in walkdir.into_iter().enumerate() {
             self.set_path(path.unwrap().path().to_path_buf());
             if i == 0 {
+                if PathBuf::from(&self.destination).is_symlink() {
+                    return Err(SymlinkCheck::SymlinkError(self.destination.to_string()))
+                }
                 statements.key_insert_update(self).unwrap();
                 statements.update_secondary(self, i as i64).unwrap();
                 
@@ -154,5 +158,22 @@ impl Construct {
             }
             self.linker.push(Link::new(self, i as i64));
         }
+        Ok(())
+    }
+}
+
+pub enum SymlinkCheck {
+    SymlinkError(String)
+}
+
+impl fmt::Display for SymlinkCheck {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f,"{}:","Error".red())?;
+        match self {
+            SymlinkCheck::SymlinkError(s) => {
+                writeln!(f, "A symlink was found at {}.\nPlease rerun declarix for changes to be made.\nIf you see this error again, you will need to manually remove this symlink.", s.red())?
+            }
+        }
+        Ok(())
     }
 }

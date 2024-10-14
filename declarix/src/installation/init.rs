@@ -21,7 +21,7 @@ use toml::Value;
 
 use crate::manage_data::tools::{checker, convert_to_string, get_array, get_buffer};
 
-use super::{database::database::{PackDatabase, PackStatements}, installers::{Arch, Builder, Debian, Flatpak, OpenSUSE, Prog, Vsc}};
+use super::{database::database::{PackDatabase, PackStatements}, installers::{Arch, Builder, Debian, Fedora, Flatpak, OpenSUSE, Prog, Vsc}};
 
 #[derive(Debug)]
 pub enum Err {
@@ -33,6 +33,7 @@ pub enum Manager {
     Arch,
     Debian,
     OpenSUSE,
+    Fedora,
     Vsc,
     Vscodium,
     Flatpak,
@@ -65,7 +66,10 @@ impl Install {
             },
             "zypper" => {
                 self.gather.push((title, Manager::OpenSUSE, array));
-            }
+            },
+            "dnf" => {
+                self.gather.push((title, Manager::Fedora, array));
+            },
             "vsc" | "code" | "vscode" => {
                 self.gather.push(("code".to_string(),Manager::Vsc, array));
                 self.vsc+=1
@@ -104,7 +108,11 @@ impl Install {
                 "zypper" => {
                     OpenSUSE::new(&title).prog.init(packages, &mut statements);
                     false
-                }
+                },
+                "dnf" => {
+                    Fedora::new(&title).prog.init(packages, &mut statements);
+                    false
+                },
                 &_ => {true}
             }
         });
@@ -129,7 +137,11 @@ impl Prog {
             let mut to_install = Vec::new();
             for package in &self.packages {
                 if !self.installed(&installed, package) {
-                    to_install.push(package.to_string());
+                    if self.prog == "code" || self.prog == "vscodium" {
+                        self.install_command(&vec![package.to_string()]);
+                    } else {
+                        to_install.push(package.to_string());
+                    }
                 }
                 if statements.update.execute((package, &self.prog)).unwrap() == 0 {
                     statements.insert.execute((package, &self.prog)).unwrap();
@@ -152,7 +164,12 @@ impl Prog {
         }).unwrap();
         let mut to_uninstall = Vec::new();
         for package in pack_iter {
-            to_uninstall.push(package.unwrap())
+            if self.prog == "code" || self.prog == "vscodium" {
+                self.uninstall_command(&vec![package.unwrap()]);
+            } else {
+                to_uninstall.push(package.unwrap())
+            }
+            
         }
         if !to_uninstall.is_empty() {
             self.uninstall_command(&to_uninstall);
@@ -170,7 +187,7 @@ impl Prog {
     }
 
     fn installed(&self, installed: &str, mtch: &str) -> bool {
-        let reg = "\\\"|\\\\n|\\\\t| |/";
+        let reg = "\\\"|\\\\n|\\\\t| |/|.";
         let reg = &format!("({}|^){}({}|$)",&reg,&mtch,&reg);
         let re = Regex::new(reg).unwrap();
         return re.is_match(installed);

@@ -56,7 +56,7 @@ impl Set {
             "generic" => Self::Generic,
             &_ => {
                 //ToDo Error
-                exit(1);
+                exit(1)
             }
         }
     }
@@ -79,7 +79,8 @@ impl Setting {
             Self::Link,
             Self::Recursive,
             Self::Secure_Link,
-            Self::Secure_Recursive
+            Self::Secure_Recursive,
+            Self::Copy,
         ]
     }
 }

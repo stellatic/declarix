@@ -49,7 +49,12 @@ impl Construct {
                 statements.update_primary(self.hash).unwrap();
             },
             _ => {
-                self.get_special(statements)
+                match self.get_special(statements) {
+                    Ok(a) => a,
+                    Err(e) => {
+                        println!("{}",e)
+                    }
+                }
             }
         }
     }
